@@ -16,16 +16,17 @@ class DeepWalk(RandomWalk):
                         pairs.append((walk[i], walk[i + j]))
         return pairs
 
-    def tanh(self, x):
-        return np.tanh(x)
+    def safe_sigmoid(self, x):
+        return 1 / (1 + np.exp(-np.clip(x, -20, 20)))
+
 
     def train_skip_gram(self, pairs, embed_size, num_epochs, learning_rate):
         nodes = list(set([node for pair in pairs for node in pair]))
         node_index = {node: idx for idx, node in enumerate(nodes)}
 
         num_nodes = len(nodes)
-        W = np.random.rand(num_nodes, embed_size)
-        W_context = np.random.rand(num_nodes, embed_size)
+        W = np.random.randn(num_nodes, embed_size) * 0.01
+        W_context = np.random.randn(num_nodes, embed_size) * 0.01
 
         for epoch in range(num_epochs):
             for target, context in pairs:
@@ -35,9 +36,9 @@ class DeepWalk(RandomWalk):
                 # Compute score using dot product
                 score = np.dot(W[target_idx], W_context[context_idx])
 
-                # Apply the tanh function
-                tanh_score = self.tanh(score)
-                error = 1 - tanh_score
+                # Apply the safe sigmoid function
+                sigmoid_score = self.safe_sigmoid(score)
+                error = 1 - sigmoid_score
 
                 # Update weights
                 W[target_idx] -= learning_rate * error * W_context[context_idx]
